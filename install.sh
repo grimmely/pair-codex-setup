@@ -52,6 +52,22 @@ require_node_22() {
   fi
 }
 
+require_exporter_0_2() {
+  local exporter_version exporter_major exporter_minor
+  exporter_version=$(codex-session-exporter --version 2>/dev/null) ||
+    die 'codex-session-exporter 0.2.0 or newer is required'
+
+  if [[ ! "$exporter_version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+    die "could not determine codex-session-exporter version: $exporter_version"
+  fi
+
+  exporter_major=${BASH_REMATCH[1]}
+  exporter_minor=${BASH_REMATCH[2]}
+  if (( exporter_major == 0 && exporter_minor < 2 )); then
+    die "codex-session-exporter 0.2.0 or newer is required; found: $exporter_version"
+  fi
+}
+
 require_tar_gzip() {
   local tar_probe_dir
   tar_probe_dir=$(mktemp -d "${TMPDIR:-/tmp}/pair-codex-tar.XXXXXX") ||
@@ -137,12 +153,11 @@ require_complete_environment() {
   require_fish_4
   require_node_22
   require_tar_gzip
+  require_exporter_0_2
   codex login status >/dev/null 2>&1 ||
     die 'Codex CLI must be signed in before installation'
   gh auth status --hostname github.com >/dev/null 2>&1 ||
     die 'GitHub CLI must be authenticated for github.com before installation'
-  codex-session-exporter --help >/dev/null 2>&1 ||
-    die 'codex-session-exporter with usable Node 22+ is required'
 }
 
 validate_storage_repo() {

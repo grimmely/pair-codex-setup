@@ -5,15 +5,19 @@ Complete, safety-first setup for async AI pair programming with Codex.
 It installs global handoff access plus an optional isolated Codex profile with
 pairing instructions, selected skills, pinned plugins, and the public
 [Pair Codex Handoffs](https://github.com/grimmely/pair-codex-handoffs) tool.
-Your transcripts, session bundles, and patches stay in a private GitHub
-repository that you choose during installation.
+Your session bundles and patches stay in a private GitHub repository that you
+choose during installation.
 
 ## Before installation
 
 Install and authenticate these prerequisites:
 
 - Bash, Fish 4+, Git, `curl`, and `tar` with gzip support.
-- Node.js 22+ and `codex-session-exporter` on `PATH`.
+- Node.js 22+ and `codex-session-exporter` 0.2.0+ on `PATH`:
+
+  ```fish
+  curl -fsSL https://raw.githubusercontent.com/GrimalDev/codex-session-exporter/main/scripts/install-from-github.sh | bash
+  ```
 - Codex CLI, signed in: `codex login status`.
 - GitHub CLI, signed in: `gh auth status --hostname github.com`.
 
@@ -125,7 +129,7 @@ end of day
 
 next session
   -> $handoff receive <shared URL>
-  -> inspect context and patch
+  -> inspect handoff note and patch
   -> confirm session import
   -> continue work
 ```
@@ -133,6 +137,9 @@ next session
 The skill asks for confirmation immediately before cloning storage, importing a
 session, committing, or pushing. It never checks out a sender commit or applies
 a source patch automatically.
+
+A handoff contains only restoration data, `HANDOFF.md`, and an optional tracked
+source patch. Untracked source files are never transferred.
 
 ## Change storage later
 
