@@ -17,8 +17,7 @@ Install and authenticate these prerequisites:
 - Codex CLI, signed in: `codex login status`.
 - GitHub CLI, signed in: `gh auth status --hostname github.com`.
 
-Then create a private GitHub repository for your pair’s handoff storage,
-initialized on `main`:
+Then create a private GitHub repository for your pair’s handoff storage:
 
 ```text
 OWNER/PRIVATE-HANDOFF-STORAGE
@@ -27,12 +26,15 @@ OWNER/PRIVATE-HANDOFF-STORAGE
 It must:
 
 - Be private.
-- Use `main` as its default branch.
 - Be accessible to `gh repo view OWNER/PRIVATE-HANDOFF-STORAGE`.
 - Grant your pair collaborator write access before you share a handoff URL.
+- If it already has Git content, use `main` as its default branch.
 
-The installer never creates this repository. Handoff contents are plaintext in
-Git; compression reduces size but does not encrypt data.
+The repository may be empty. The installer never creates the GitHub repository;
+it initializes one with no Git refs by pushing one empty `main` commit. Existing
+Git content remains untouched. Handoff contents are plaintext in Git;
+compression reduces size but does not encrypt data. Do not run initial setup
+concurrently for the same storage repository.
 
 ## Install
 
@@ -53,8 +55,12 @@ bash install.sh
 ```
 
 When prompted, enter the private storage repository in `owner/repo` form.
-Installation validates private visibility and `main`, then stages all files and
-publishes them only after plugins and storage setup succeed.
+Installation validates private visibility and write access, initializes an empty
+storage repository on `main` when needed, then stages all files and publishes
+them only after plugins and storage setup succeed.
+
+That first empty `main` commit is a remote action. If a later local installation
+step fails, it remains; rerun installation to reuse it.
 
 ```text
 $HOME/.pair-codex/
@@ -173,7 +179,9 @@ Included skills:
   `sync-handoff-skill.fish` refresh of `handoff`, which first saves a backup.
 - A recognized prior generated `PAIRING.md` is the one upgrade exception.
 - The installer refuses symbolic-link destinations.
-- Storage requires a private GitHub repo, SSH/HTTPS remote, and `main`.
+- Storage requires a private GitHub repo, SSH/HTTPS remote, and `main`. A
+  completely empty repository receives one empty `main` initialization commit;
+  existing Git content is never modified.
 - Bundles above 100 MiB are refused; Git history retains prior bundles.
 - Review patches with `git apply --check` before applying them.
 - The installer clones and executes the public handoff tool's `main`; inspect

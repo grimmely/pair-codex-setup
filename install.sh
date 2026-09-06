@@ -152,19 +152,21 @@ validate_storage_repo() {
     die 'storage repository must use the form owner/repo'
 
   repository_metadata=$(gh api --hostname github.com "repos/$storage_repo" \
-    --jq '[.private, (.default_branch // ""), (.permissions.push // false)] | @tsv' 2>/dev/null) ||
+    --jq '[(.private | tostring), (.default_branch // ""), ((.permissions.push // false) | tostring)] | join("\u001e")' 2>/dev/null) ||
     die "cannot access storage repository through gh: $storage_repo"
-  IFS=$'\t' read -r private_visibility default_branch push_permission <<< "$repository_metadata"
+  IFS=$'\036' read -r private_visibility default_branch push_permission <<< "$repository_metadata"
   [ "$private_visibility" = true ] ||
     die "storage repository must be private: $storage_repo"
-  [ "$default_branch" = main ] ||
-    die "storage repository must use main as its default branch: $storage_repo"
+  [ -z "$default_branch" ] || [ "$default_branch" = main ] ||
+    die "storage repository must have no default branch or use main: $storage_repo"
   [ "$push_permission" = true ] ||
     die "storage repository must grant you push access: $storage_repo"
 }
 
 prompt_storage_repo() {
-  printf '%s\n' 'Create a private handoff storage repository first; it must use main and be accessible through gh.' >&2
+  printf '%s\n' \
+    'Create a private handoff storage repository first. It may be empty; an' \
+    'existing repository must use main and be accessible through gh.' >&2
   printf '%s' 'Private handoff storage repository (owner/repo): ' >&2
   IFS= read -r storage_repo || die 'could not read storage repository'
   validate_storage_repo "$storage_repo"
