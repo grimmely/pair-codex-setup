@@ -1,242 +1,172 @@
-# Pair Codex Sessions
+# Pair Codex Setup
 
-Portable, safety-first Codex pairing setup.
+Complete, safety-first setup for async AI pair programming with Codex.
 
-It installs the pairing contract, agent roles, feedback hook, bundled skills,
-pinned plugins, and private async-handoff checkout. It never exports login
-state, connector credentials, histories, caches, project trust, worktrees, or
-hook approvals.
+It installs an isolated Codex environment, pairing instructions, selected
+skills, pinned plugins, and the public
+[Pair Codex Handoffs](https://github.com/grimmely/pair-codex-handoffs) tool.
+Your transcripts, session bundles, and patches stay in a private GitHub
+repository that you choose during installation.
+
+## Before installation
+
+Install and authenticate these prerequisites:
+
+- Bash, Fish 4+, Git, and `tar` with gzip support.
+- Node.js 22+ and `codex-session-exporter` on `PATH`.
+- Codex CLI, signed in: `codex login status`.
+- GitHub CLI, signed in: `gh auth status --hostname github.com`.
+
+Then create a private GitHub repository for your pair’s handoff storage,
+initialized on `main`:
+
+```text
+OWNER/PRIVATE-HANDOFF-STORAGE
+```
+
+It must:
+
+- Be private.
+- Use `main` as its default branch.
+- Be accessible to `gh repo view OWNER/PRIVATE-HANDOFF-STORAGE`.
+- Grant your pair collaborator write access before you share a handoff URL.
+
+The installer never creates this repository. Handoff contents are plaintext in
+Git; compression reduces size but does not encrypt data.
 
 ## Install
 
-### Migrate an earlier handoff checkout
-
-Earlier releases used `$HOME/pair-codex-sessions` for private handoffs. Move
-that checkout before cloning this setup repository into the same directory:
-
-```bash
-legacy_origin=$(git -C "$HOME/pair-codex-sessions" remote get-url origin) || {
-  printf '%s\n' 'Could not read the former handoff checkout origin.' >&2
-  exit 1
-}
-if [[ ! "$legacy_origin" =~ ^(git@github\.com:|ssh://git@github\.com/|https://([^/@]+@)?github\.com/)(grimmely/(sapiom-pair-codex-sessions|pair-codex-handoffs))(\.git)?$ ]]; then
-  printf '%s\n' 'Source is not a recognized former handoff checkout.' >&2
-  exit 1
-fi
-test ! -e "$HOME/pair-codex-handoffs" || {
-  printf '%s\n' 'Destination already exists; reconcile both checkouts manually.' >&2
-  exit 1
-}
-git -C "$HOME/pair-codex-sessions" remote set-url origin \
-  https://github.com/grimmely/pair-codex-handoffs.git || exit 1
-mv "$HOME/pair-codex-sessions" "$HOME/pair-codex-handoffs" || exit 1
-```
-
-Run this only when that directory is the former private handoff checkout. The
-installer detects it and stops rather than moving or replacing it automatically.
-If `$HOME/pair-codex-handoffs` already exists, reconcile the two checkouts
-manually; do not overwrite either one.
-
-Requirements:
-
-- macOS or Linux with Bash.
-- Fish 4+, Git, and `tar` with gzip support.
-- Codex CLI, signed in.
-- GitHub CLI, authenticated for `github.com` with access to the private
-  `grimmely/pair-codex-handoffs` repository.
-- `codex-session-exporter` on `PATH`, with a usable Node 22+ runtime.
-
-Clone the repository:
-
-```bash
-git clone https://github.com/grimmely/pair-codex-sessions.git
-cd pair-codex-sessions
+```fish
+git clone https://github.com/grimmely/pair-codex-setup.git
+cd pair-codex-setup
 bash install.sh
 ```
 
-Every install adds the pinned plugin set and creates
-`$HOME/pair-codex-handoffs` when absent. It uses the network, Codex CLI, and
-private GitHub access. Missing prerequisites or failed staging abort before any
-Codex state, global skill, or handoff checkout is published.
-An existing handoff checkout must use SSH or HTTPS for the expected private
-GitHub repository.
+When prompted, enter the private storage repository in `owner/repo` form.
+Installation validates private visibility and `main`, then stages all files and
+publishes them only after plugins and storage setup succeed.
 
 ```text
-Codex state  $HOME/.pair-codex
-User skills  $HOME/.agents/skills
-Handoff repo $HOME/pair-codex-handoffs
+$HOME/.pair-codex/
+  tools/pair-codex-handoffs/      public Fish tool + handoff skill source
+  handoff/storage-repo            chosen GitHub storage slug
+  handoff-storage/OWNER/REPO/     private local storage checkout
+  AGENTS.md, config.toml, agents/ pairing environment
+
+$HOME/.agents/skills/
+  handoff/                        Codex handoff skill
+  grilling/, to-tickets/, unslop/ pairing skills
 ```
 
-Start it:
+### Upgrade a previous Pair Codex install
 
-```bash
+From an updated checkout, run `bash install.sh` again. It recognizes the
+unmodified generated layouts from the first two setup releases and the earlier
+async-handoff release. It adds the new tool and private storage configuration,
+then updates only the known generated `PAIRING.md`.
+
+Existing generic global skills and the former `$HOME/pair-codex-handoffs`
+checkout remain untouched. After the new `handoff` skill publishes, the old
+`async-pair-handoff` skill moves to
+`$HOME/.pair-codex/legacy-skills/async-pair-handoff`; its files remain
+available, but Codex no longer discovers its unsafe obsolete command. This
+move happens only for the exact unmodified legacy skill; otherwise installation
+stops for manual reconciliation. Use `$handoff` after upgrading. Do not run
+the former checkout’s scripts.
+
+An installer stops if a managed Codex file, the new handoff destination, or an
+existing `handoff` skill differs from what it recognizes. Reconcile that state
+manually or use a fresh `--codex-home`; it never merges or replaces it.
+
+Start Codex with the installed environment:
+
+```fish
 CODEX_HOME="$HOME/.pair-codex" codex
 ```
 
-Then run `/hooks`, inspect `feedback-learning.sh`, and explicitly trust it.
-The installer never uses `--dangerously-bypass-hook-trust`.
+## Daily handoff flow
 
-## How to pair with AI
-
-This setup keeps the human in control through short, observable loops. Do not
-ask it to disappear for twenty minutes and return with a large change. Ask for
-one fact, one failing check, or one smallest passing change at a time.
-
-### The core loop
+In Codex, choose `handoff` from the slash-command list or type `$handoff`.
 
 ```text
-goal or problem
-  -> alignment: inspect relevant code and show facts
-  -> approval: "implement" or "let's do it"
-  -> one feedback-producing step
-       investigate -> show fact
-       test        -> show red
-       minimal code -> show green
-  -> report evidence
-  -> decide: continue, redirect, or stop
+end of day
+  -> $handoff send
+  -> inspect pending source/session details
+  -> confirm export + private Git push
+  -> share returned GitHub URL
+
+next session
+  -> $handoff receive <shared URL>
+  -> inspect context and patch
+  -> confirm session import
+  -> continue work
 ```
 
-The agent continues routine checks when evidence cannot change the next move.
-It pauses when a decision, scope change, or architecture choice needs you.
+The skill asks for confirmation immediately before cloning storage, importing a
+session, committing, or pushing. It never checks out a sender commit or applies
+a source patch automatically.
 
-### Your controls
+## Change storage later
 
-| Say | Expected behavior |
-| --- | --- |
-| Describe a goal, bug, or question | Alignment. Agent investigates only. |
-| `implement` or `let's do it` | Approves the discussed change. |
-| `continue` | Exactly one next evidence-producing step. |
-| Correct scope or priority | Redirects the next step. |
-| `stop` or `hold here` | Ends active work. |
+Ask Codex for `$handoff configure`, or use the dispatcher directly:
 
-`continue` is deliberately small. It preserves a point where you can change
-direction before work grows expensive to revise.
+```fish
+fish "$HOME/.pair-codex/tools/pair-codex-handoffs/scripts/pair-handoff.fish" \
+  configure --storage-repo OWNER/ANOTHER-PRIVATE-STORAGE
+```
 
-### Shape a useful slice
+Changing storage creates or reuses that repository’s own local checkout. It
+does not replace or delete previous storage checkouts.
+
+Check health and currently supported harnesses:
+
+```fish
+fish "$HOME/.pair-codex/tools/pair-codex-handoffs/scripts/pair-handoff.fish" \
+  status
+```
+
+Only Codex is supported today. Storage is already organized for additional
+harness adapters:
 
 ```text
-slice
-  outcome       = observable user or system behavior
-  first feedback = one fact, red test, or green change
-  evidence      = command output, diff, test result, or screenshot
-  stop point    = evidence that can change the next decision
-  next step     = chosen only after seeing that evidence
+handoffs/codex/YYYY-MM-DD/<handoff-id>/
 ```
 
-Good:
+## What gets installed
 
-```text
-Investigate why an expired invite still opens. Show the request path and test.
-```
-
-```text
-Implement rejection of expired invites. First add the smallest failing test.
-```
-
-Too broad:
-
-```text
-Rework the whole invitation system and make it robust.
-```
-
-For broad work, first ask for the map: callers, boundaries, compatibility
-constraints, and the smallest end-to-end outcome. Use `/to-tickets` when a
-plan needs separate feedback-first slices.
-
-### Why show red?
-
-A red test shows the requested behavior is observable and missing before code
-changes. Green then means the smallest change made that observation pass.
-
-```text
-expected behavior
-  -> test fails for the right reason
-  -> minimal code
-  -> same test passes
-  -> refactor while green
-```
-
-Do not force a red test for research, documentation, or changes where a test
-does not improve confidence. The point is evidence, not ceremony.
-
-### Prompt patterns
-
-```text
-Investigate <problem>. Show facts only; do not edit yet.
-
-Implement <outcome>. First establish the narrowest failing test.
-
-Continue.
-
-Redirect: keep <constraint>; do not change <boundary>.
-
-Stop here. Summarize evidence and remaining risk.
-```
-
-Keep teaching brief and attached to the current code or decision. Ask for an
-explanation when it helps, not an exercise for routine work.
-
-### Where the behavior comes from
-
-```text
-README.md
-  -> human operating guide
-codex/AGENTS.md
-  -> alignment, approval, quality, and response contract
-codex/PAIRING.md
-  -> feedback-loop rule and ticket shape
-codex/hooks/feedback-learning.sh
-  -> short session-start reminder
-agents/skills/to-tickets
-  -> feedback-first ticket drafting
-```
-
-Read [AGENTS.md](codex/AGENTS.md) for the full contract and
-[PAIRING.md](codex/PAIRING.md) for the concise operating rule.
-
-## Pinned plugins
-
-The installer always pins the Claude marketplace to a Git commit, stages the
-whole install, then publishes it only after every plugin succeeds. If a plugin
-installation fails, fix the cause and retry. No Codex state, skills, or newly
-cloned handoff checkout are published by that failed run.
-
-`plugins/host-managed-plugins.txt` records source-machine desktop/runtime
-plugins. It does not install them: their marketplaces are version-specific.
-
-## Safety model
-
-- Refuses an existing or symbolic-link Codex destination.
-- Creates new Codex and skill directories with owner-only permissions.
-- Never replaces an existing global skill.
-- Uses Codex's supported global skill path: `$HOME/.agents/skills`.
-- Resolves an installer symlink back to this bundle before reading files.
-- Excludes the `chief-of-staff` agent and broad automation skills. They can
-  archive messages, change calendars, collect tool data, or depend on another
-  runtime.
+The setup includes the pairing contract, focused agent roles, a session-start
+reminder, and pinned plugins. It does not copy login state, credentials,
+histories, caches, trusted-project state, worktrees, or hook approvals.
 
 Included skills:
 
-- `async-pair-handoff`: chat-guided private session handoffs.
-- `grilling`: design challenge when a proposed implementation needs scrutiny.
-- `to-tickets`: feedback-first slices.
-- `unslop`: concise, natural writing.
+- `handoff`: guided private async handoffs.
+- `grilling`: one material design challenge before implementation.
+- `to-tickets`: feedback-first work slices.
+- `unslop`: concise, natural responses.
 
-See `skills-manifest.txt` for exact scope.
+## Safety and updates
 
-Agent roles install as instructions, never as binaries or MCP servers.
-`docs-lookup` uses the installed Context7 plugin, then falls back to tools
-available in the receiving runtime. `e2e-runner` uses only an already installed
-project runner. Language-specific roles require that project's normal toolchain.
+- Existing Codex state or global skills are never replaced, except an explicit
+  `sync-handoff-skill.fish` refresh of `handoff`, which first saves a backup.
+- A recognized prior generated `PAIRING.md` is the one upgrade exception.
+- The installer refuses symbolic-link destinations.
+- Storage requires a private GitHub repo, SSH/HTTPS remote, and `main`.
+- Bundles above 100 MiB are refused; Git history retains prior bundles.
+- Review patches with `git apply --check` before applying them.
+- The installer clones and executes the public handoff tool's `main`; inspect
+  that repository before installing if you need to audit executable sources.
 
-See `agents-manifest.txt` for the conditional roles.
+Update the setup repository and public tool independently on `main`:
 
-## Verify
-
-```bash
-bash tests/install-test.sh
-CODEX_HOME="$HOME/.pair-codex" codex doctor
+```fish
+git pull --ff-only
+git -C "$HOME/.pair-codex/tools/pair-codex-handoffs" pull --ff-only
+fish "$HOME/.pair-codex/tools/pair-codex-handoffs/scripts/sync-handoff-skill.fish"
 ```
 
-Codex discovers global skills at `$HOME/.agents/skills`. Hooks need local
-review and trust on the receiving computer.
+The skill refresh is explicit and preserves its previous copy under
+`$HOME/.pair-codex/handoff-skill-backups/`.
+
+For full handoff command documentation, see
+[Pair Codex Handoffs](https://github.com/grimmely/pair-codex-handoffs).

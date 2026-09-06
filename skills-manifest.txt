@@ -1,8 +1,8 @@
 # Portable skills
 
-async-pair-handoff
-  Guides confirmed private session send/receive flows through the shared
-  Git-backed handoff checkout.
+handoff
+  Installed from the public Pair Codex Handoffs tool. Guides confirmed private
+  session send/receive flows through user-configured Git storage.
 
 grilling
   Required by AGENTS.md when the user proposes an implementation. One material
