@@ -157,7 +157,7 @@ Only Codex is supported today. Storage is already organized for additional
 harness adapters:
 
 ```text
-handoffs/codex/YYYY-MM-DD/<handoff-id>/
+handoffs/codex/YYYY/MM/DD/<handoff-id>/
 ```
 
 ## What gets installed
