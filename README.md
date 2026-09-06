@@ -12,7 +12,7 @@ repository that you choose during installation.
 
 Install and authenticate these prerequisites:
 
-- Bash, Fish 4+, Git, and `tar` with gzip support.
+- Bash, Fish 4+, Git, `curl`, and `tar` with gzip support.
 - Node.js 22+ and `codex-session-exporter` on `PATH`.
 - Codex CLI, signed in: `codex login status`.
 - GitHub CLI, signed in: `gh auth status --hostname github.com`.
@@ -35,6 +35,16 @@ The installer never creates this repository. Handoff contents are plaintext in
 Git; compression reduces size but does not encrypt data.
 
 ## Install
+
+```fish
+curl -fsSL https://raw.githubusercontent.com/grimmely/pair-codex-setup/main/bootstrap.sh | bash
+```
+
+The bootstrapper clones the complete setup bundle into a private temporary
+directory, runs its bundled installer, then removes that temporary checkout.
+Run it from an interactive terminal: installer asks for your storage repository.
+
+Or inspect and run a local checkout:
 
 ```fish
 git clone https://github.com/grimmely/pair-codex-setup.git
