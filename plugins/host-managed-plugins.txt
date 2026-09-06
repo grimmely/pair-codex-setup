@@ -1,0 +1,18 @@
+# Current host-provided plugins from the source machine.
+# Do not install these from this bundle: their marketplace paths are
+# platform- and Codex-version-specific. A receiving Codex runtime supplies
+# them when available.
+browser@openai-bundled
+visualize@openai-bundled
+google-calendar@openai-curated
+slack@openai-curated
+documents@openai-primary-runtime
+pdf@openai-primary-runtime
+spreadsheets@openai-primary-runtime
+presentations@openai-primary-runtime
+template-creator@openai-primary-runtime
+chrome@openai-bundled
+codex-app-tools@openai-bundled
+sites@openai-bundled
+unified-computer-use@openai-bundled
+computer-use@openai-bundled

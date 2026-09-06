@@ -1,0 +1,12 @@
+# Portable skills
+
+grilling
+  Required by AGENTS.md when the user proposes an implementation. One material
+  challenge only, then return to the feedback loop.
+
+to-tickets
+  Carries the investigate -> show fact / test -> show red / minimal code
+  -> show green slicing rule.
+
+unslop
+  Keeps pairing responses concise without removing useful reasoning.

@@ -1,0 +1,17 @@
+# Portable agent roles
+
+All included roles use only tools exposed by the receiving Codex runtime.
+The installer does not add binaries, MCP servers, or credentials.
+
+Conditional integrations
+
+docs-lookup
+  Uses Context7 when installed by --with-plugins. Falls back when unavailable.
+
+e2e-runner
+  Uses an existing Agent Browser, Playwright, or project E2E runner. It never
+  installs a global runner itself.
+
+Language-specific reviewers and build resolvers
+  Need the relevant project toolchain already available on the receiving
+  computer.

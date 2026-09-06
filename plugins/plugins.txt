@@ -1,0 +1,16 @@
+# Portable pairing plugins. The intentionally disabled learning-output-style
+# plugin is absent. Host-provided plugins are listed separately.
+claude-code-setup@claude-plugins-official
+claude-md-management@claude-plugins-official
+code-review@claude-plugins-official
+code-simplifier@claude-plugins-official
+context7@claude-plugins-official
+feature-dev@claude-plugins-official
+github@claude-plugins-official
+greptile@claude-plugins-official
+php-lsp@claude-plugins-official
+pyright-lsp@claude-plugins-official
+rust-analyzer-lsp@claude-plugins-official
+skill-creator@claude-plugins-official
+superpowers@claude-plugins-official
+typescript-lsp@claude-plugins-official
