@@ -1,0 +1,7 @@
+interface:
+  display_name: "Async Pair Handoff"
+  short_description: "Guide safe async Codex pair handoffs"
+  default_prompt: "Use $async-pair-handoff to hand off this session to my pair."
+
+policy:
+  allow_implicit_invocation: true

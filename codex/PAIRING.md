@@ -23,6 +23,7 @@ redirect the work.
 | --- | --- |
 | `AGENTS.md` | Pairing contract and implementation rhythm |
 | `hooks/feedback-learning.sh` | Short session-start pairing reminder |
+| `../.agents/skills/async-pair-handoff/SKILL.md` | Confirmed async handoffs |
 | `../.agents/skills/to-tickets/SKILL.md` | Feedback-first ticket drafting |
 | `config.toml` | Local hook registration and plugin setting |
 

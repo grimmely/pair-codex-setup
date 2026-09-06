@@ -1,5 +1,9 @@
 # Portable skills
 
+async-pair-handoff
+  Guides confirmed private session send/receive flows through the shared
+  Git-backed handoff checkout.
+
 grilling
   Required by AGENTS.md when the user proposes an implementation. One material
   challenge only, then return to the feedback loop.

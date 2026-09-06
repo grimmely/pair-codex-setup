@@ -1,34 +1,70 @@
-# Pair Codex Setup
+# Pair Codex Sessions
 
 Portable, safety-first Codex pairing setup.
 
-It recreates the pairing contract, agent roles, feedback hook, and three
-behavior-critical skills. It never exports login state, connector credentials,
-histories, caches, project trust, worktrees, or hook approvals.
+It installs the pairing contract, agent roles, feedback hook, bundled skills,
+pinned plugins, and private async-handoff checkout. It never exports login
+state, connector credentials, histories, caches, project trust, worktrees, or
+hook approvals.
 
 ## Install
+
+### Migrate an earlier handoff checkout
+
+Earlier releases used `$HOME/pair-codex-sessions` for private handoffs. Move
+that checkout before cloning this setup repository into the same directory:
+
+```bash
+legacy_origin=$(git -C "$HOME/pair-codex-sessions" remote get-url origin) || {
+  printf '%s\n' 'Could not read the former handoff checkout origin.' >&2
+  exit 1
+}
+if [[ ! "$legacy_origin" =~ ^(git@github\.com:|ssh://git@github\.com/|https://([^/@]+@)?github\.com/)(grimmely/(sapiom-pair-codex-sessions|pair-codex-handoffs))(\.git)?$ ]]; then
+  printf '%s\n' 'Source is not a recognized former handoff checkout.' >&2
+  exit 1
+fi
+test ! -e "$HOME/pair-codex-handoffs" || {
+  printf '%s\n' 'Destination already exists; reconcile both checkouts manually.' >&2
+  exit 1
+}
+git -C "$HOME/pair-codex-sessions" remote set-url origin \
+  https://github.com/grimmely/pair-codex-handoffs.git || exit 1
+mv "$HOME/pair-codex-sessions" "$HOME/pair-codex-handoffs" || exit 1
+```
+
+Run this only when that directory is the former private handoff checkout. The
+installer detects it and stops rather than moving or replacing it automatically.
+If `$HOME/pair-codex-handoffs` already exists, reconcile the two checkouts
+manually; do not overwrite either one.
 
 Requirements:
 
 - macOS or Linux with Bash.
-- Git, to clone this repository.
-- Codex CLI and sign-in only for `--with-plugins`.
+- Fish 4+, Git, and `tar` with gzip support.
+- Codex CLI, signed in.
+- GitHub CLI, authenticated for `github.com` with access to the private
+  `grimmely/pair-codex-handoffs` repository.
+- `codex-session-exporter` on `PATH`, with a usable Node 22+ runtime.
 
-Use a released tag rather than a mutable branch when one is available:
+Clone the repository:
 
 ```bash
-git clone --branch v1.0.1 --depth 1 \
-  https://github.com/grimmely/pair-codex-setup.git
-cd pair-codex-setup
+git clone https://github.com/grimmely/pair-codex-sessions.git
+cd pair-codex-sessions
 bash install.sh
 ```
 
-Default install is core-only. It makes no network request and does not invoke
-the Codex CLI.
+Every install adds the pinned plugin set and creates
+`$HOME/pair-codex-handoffs` when absent. It uses the network, Codex CLI, and
+private GitHub access. Missing prerequisites or failed staging abort before any
+Codex state, global skill, or handoff checkout is published.
+An existing handoff checkout must use SSH or HTTPS for the expected private
+GitHub repository.
 
 ```text
 Codex state  $HOME/.pair-codex
 User skills  $HOME/.agents/skills
+Handoff repo $HOME/pair-codex-handoffs
 ```
 
 Start it:
@@ -158,18 +194,12 @@ agents/skills/to-tickets
 Read [AGENTS.md](codex/AGENTS.md) for the full contract and
 [PAIRING.md](codex/PAIRING.md) for the concise operating rule.
 
-## Optional plugins
+## Pinned plugins
 
-Third-party plugins are explicit opt-in. The installer pins the Claude
-marketplace to a Git commit, stages the whole install, then publishes it only
-after every plugin succeeds.
-
-```bash
-bash install.sh --with-plugins
-```
-
-If plugin installation fails, retry after fixing the cause. No Codex state or
-skills were published by that failed run.
+The installer always pins the Claude marketplace to a Git commit, stages the
+whole install, then publishes it only after every plugin succeeds. If a plugin
+installation fails, fix the cause and retry. No Codex state, skills, or newly
+cloned handoff checkout are published by that failed run.
 
 `plugins/host-managed-plugins.txt` records source-machine desktop/runtime
 plugins. It does not install them: their marketplaces are version-specific.
@@ -187,6 +217,7 @@ plugins. It does not install them: their marketplaces are version-specific.
 
 Included skills:
 
+- `async-pair-handoff`: chat-guided private session handoffs.
 - `grilling`: design challenge when a proposed implementation needs scrutiny.
 - `to-tickets`: feedback-first slices.
 - `unslop`: concise, natural writing.
@@ -194,10 +225,9 @@ Included skills:
 See `skills-manifest.txt` for exact scope.
 
 Agent roles install as instructions, never as binaries or MCP servers.
-`docs-lookup` uses Context7 when `--with-plugins` installs it, then falls back
-to the tools available in the receiving runtime. `e2e-runner` uses only an
-already installed project runner. Language-specific roles require that
-project's normal toolchain.
+`docs-lookup` uses the installed Context7 plugin, then falls back to tools
+available in the receiving runtime. `e2e-runner` uses only an already installed
+project runner. Language-specific roles require that project's normal toolchain.
 
 See `agents-manifest.txt` for the conditional roles.
 

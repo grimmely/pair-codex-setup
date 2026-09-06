@@ -6,7 +6,7 @@ The installer does not add binaries, MCP servers, or credentials.
 Conditional integrations
 
 docs-lookup
-  Uses Context7 when installed by --with-plugins. Falls back when unavailable.
+  Uses the installed Context7 plugin. Falls back when unavailable.
 
 e2e-runner
   Uses an existing Agent Browser, Playwright, or project E2E runner. It never
