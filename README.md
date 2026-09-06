@@ -108,6 +108,7 @@ CODEX_HOME="$HOME/.pair-codex" codex
 ## Daily handoff flow
 
 In Codex, choose `handoff` from the slash-command list or type `$handoff`.
+Use `$handoff help` for a short, non-mutating command menu.
 
 ```text
 end of day
