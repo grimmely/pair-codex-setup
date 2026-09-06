@@ -2,8 +2,8 @@
 
 Complete, safety-first setup for async AI pair programming with Codex.
 
-It installs an isolated Codex environment, pairing instructions, selected
-skills, pinned plugins, and the public
+It installs global handoff access plus an optional isolated Codex profile with
+pairing instructions, selected skills, pinned plugins, and the public
 [Pair Codex Handoffs](https://github.com/grimmely/pair-codex-handoffs) tool.
 Your transcripts, session bundles, and patches stay in a private GitHub
 repository that you choose during installation.
@@ -88,7 +88,18 @@ An installer stops if a managed Codex file, the new handoff destination, or an
 existing `handoff` skill differs from what it recognizes. Reconcile that state
 manually or use a fresh `--codex-home`; it never merges or replaces it.
 
-Start Codex with the installed environment:
+Start Codex normally for daily handoffs:
+
+```fish
+codex
+```
+
+`$handoff` is globally available. With no `CODEX_HOME`, it sends and receives
+sessions from your normal `$HOME/.codex` store while using handoff configuration
+and private storage under `$HOME/.pair-codex`.
+
+Use the isolated Pair Codex profile only when you also want its local pairing
+instructions, hooks, and plugins:
 
 ```fish
 CODEX_HOME="$HOME/.pair-codex" codex

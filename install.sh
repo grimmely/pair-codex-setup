@@ -699,6 +699,8 @@ done
 publish_started=false
 
 printf '%s\n' 'Installed Pair Codex with pinned plugins and private async handoff storage.'
-printf 'Start it with:\n'
-printf '  CODEX_HOME="%s" codex\n' "$codex_home"
+printf '%s\n' 'Start Codex normally:'
+printf '%s\n' '  codex'
 printf '%s\n' "Then use \$handoff to send, receive, inspect, or reconfigure handoffs."
+printf '%s\n' 'Optional isolated Pair Codex profile:'
+printf '  CODEX_HOME="%s" codex\n' "$codex_home"
