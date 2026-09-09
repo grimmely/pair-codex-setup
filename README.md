@@ -1,27 +1,35 @@
-# Pair Codex Setup
+# pair-codex-setup
 
 Complete, safety-first setup for async AI pair programming with Codex.
 
 It installs global handoff access plus an optional isolated Codex profile with
 pairing instructions, selected skills, pinned plugins, and the public
-[Pair Codex Handoffs](https://github.com/grimmely/pair-codex-handoffs) tool.
+[pair-codex-handoffs](https://github.com/grimmely/pair-codex-handoffs) tool.
 Your session bundles and patches stay in a private GitHub repository that you
 choose during installation.
 
 ## Before installation
 
-Install and authenticate these prerequisites:
+Both installation modes require:
 
 - Bash, Fish 4+, Git, `curl`, and `tar` with gzip support.
-- Node.js 22+ and `codex-session-exporter` 0.2.0+ on `PATH`:
+- Node.js 22+.
 
-  ```fish
-  curl -fsSL https://raw.githubusercontent.com/GrimalDev/codex-session-exporter/main/scripts/install-from-github.sh | bash
-  ```
+The setup installer installs or updates our
+[`GrimalDev/codex-session-exporter`](https://github.com/GrimalDev/codex-session-exporter)
+fork from `main`, then checks for version 0.2.0 or newer. No separate exporter
+installation is needed. Its default location is
+`~/.local/share/codex-session-exporter`, with commands in `~/.local/bin`.
+Keep `~/.local/bin` on your shell's `PATH`; in Fish, run
+`fish_add_path ~/.local/bin` if needed.
+
+The complete setup also requires:
+
 - Codex CLI, signed in: `codex login status`.
 - GitHub CLI, signed in: `gh auth status --hostname github.com`.
 
-Then create a private GitHub repository for your pair’s handoff storage:
+For complete setup, create a private GitHub repository for your pair's storage.
+With `--skills-only`, create and configure it later through `$handoff configure`.
 
 ```text
 OWNER/PRIVATE-HANDOFF-STORAGE
@@ -41,6 +49,37 @@ compression reduces size but does not encrypt data. Do not run initial setup
 concurrently for the same storage repository.
 
 ## Install
+
+### Skills and tools only
+
+Use this mode to add handoffs to your existing Codex setup:
+
+```fish
+curl -fsSL https://raw.githubusercontent.com/grimmely/pair-codex-setup/main/bootstrap.sh | bash -s -- --skills-only
+```
+
+Or run `bash install.sh --skills-only` from a local checkout.
+
+It installs `handoff`, `grilling`, `to-tickets`, and `unslop` into
+`~/.agents/skills`, the public handoff tool into
+`~/.pair-codex/tools/pair-codex-handoffs`, and the exporter fork.
+Existing skills and valid handoff tool checkouts are preserved. A differing
+existing `handoff` skill stops installation; refresh it explicitly using
+`sync-handoff-skill.fish` as described below.
+
+This mode leaves Codex configuration, instructions, hooks, plugins, and storage
+untouched. It needs no interactive terminal or Codex/GitHub authentication during
+installation. Before using handoffs, install and authenticate `codex` and `gh`,
+start a new Codex session, then run `$handoff configure`.
+
+`--codex-home DIR` changes the handoff tool's parent directory in this mode.
+For a custom location, launch Codex with `PAIR_CODEX_HOME=DIR codex` so the
+skill can find it. With the default location and no `CODEX_HOME` set, start
+`codex` normally. If your shell sets `CODEX_HOME` to another profile, use
+`PAIR_CODEX_HOME="$HOME/.pair-codex" codex` to keep handoff tools at their
+default location while preserving your session profile.
+
+### Complete setup
 
 ```fish
 curl -fsSL https://raw.githubusercontent.com/grimmely/pair-codex-setup/main/bootstrap.sh | bash
@@ -65,6 +104,7 @@ them only after plugins and storage setup succeed.
 
 That first empty `main` commit is a remote action. If a later local installation
 step fails, it remains; rerun installation to reuse it.
+The exporter installation also remains if a later setup step fails.
 
 ```text
 $HOME/.pair-codex/
@@ -169,7 +209,7 @@ handoffs/codex/YYYY/MM/DD/<handoff-id>/
 
 ## What gets installed
 
-The setup includes the pairing contract, focused agent roles, a session-start
+The complete setup includes the pairing contract, focused agent roles, a session-start
 reminder, and pinned plugins. It does not copy login state, credentials,
 histories, caches, trusted-project state, worktrees, or hook approvals.
 
@@ -193,6 +233,8 @@ Included skills:
 - Review patches with `git apply --check` before applying them.
 - The installer clones and executes the public handoff tool's `main`; inspect
   that repository before installing if you need to audit executable sources.
+- Both modes run the exporter fork's GitHub installer. It replaces its own
+  installation directory and CLI links, leaving Codex configuration untouched.
 
 Update the setup repository and public tool independently on `main`:
 
@@ -206,4 +248,4 @@ The skill refresh is explicit and preserves its previous copy under
 `$HOME/.pair-codex/handoff-skill-backups/`.
 
 For full handoff command documentation, see
-[Pair Codex Handoffs](https://github.com/grimmely/pair-codex-handoffs).
+[pair-codex-handoffs](https://github.com/grimmely/pair-codex-handoffs).

@@ -10,6 +10,8 @@ Usage: bash install.sh [options]
 Install the complete Pair Codex setup without replacing existing state.
 
 Options:
+  --skills-only    Install global skills, handoff tool, and exporter only.
+                     Skip Codex profile, plugins, login checks, and storage setup.
   --codex-home DIR  Destination for isolated Codex state.
                      Default: $HOME/.pair-codex
   --help            Show this message.
@@ -66,6 +68,17 @@ require_exporter_0_2() {
   if (( exporter_major == 0 && exporter_minor < 2 )); then
     die "codex-session-exporter 0.2.0 or newer is required; found: $exporter_version"
   fi
+}
+
+install_exporter() {
+  printf '%s\n' 'Installing exporter from GrimalDev/codex-session-exporter main.' >&2
+  curl -fsSL https://raw.githubusercontent.com/GrimalDev/codex-session-exporter/main/scripts/install-from-github.sh |
+    CODEX_SESSION_EXPORTER_REPO=GrimalDev/codex-session-exporter bash -s -- --ref main ||
+    die 'could not install the session exporter fork'
+
+  export PATH="${CODEX_SESSION_EXPORTER_BIN_DIR:-$HOME/.local/bin}:$PATH"
+  hash -r
+  require_exporter_0_2
 }
 
 require_tar_gzip() {
@@ -146,18 +159,41 @@ validate_tool_checkout() {
 
 require_complete_environment() {
   local required_command
-  for required_command in codex fish git tar gh node codex-session-exporter; do
+  for required_command in fish git tar node curl; do
     require_command "$required_command"
   done
 
   require_fish_4
   require_node_22
   require_tar_gzip
-  require_exporter_0_2
+  [ "$skills_only" = false ] || return 0
+  require_command codex
+  require_command gh
   codex login status >/dev/null 2>&1 ||
     die 'Codex CLI must be signed in before installation'
   gh auth status --hostname github.com >/dev/null 2>&1 ||
     die 'GitHub CLI must be authenticated for github.com before installation'
+}
+
+validate_skills_only_home() {
+  local destination
+  for destination in "$1" "$1/tools"; do
+    [ ! -L "$destination" ] ||
+      die "handoff tool parent must not be a symbolic link: $destination"
+    [ ! -e "$destination" ] || [ -d "$destination" ] ||
+      die "handoff tool parent is not a directory: $destination"
+  done
+  if [ ! -e "$1" ]; then
+    validate_new_destination "$1" 'Handoff'
+    return
+  fi
+  [ -w "$1" ] || die "handoff home is not writable: $1"
+  validated_destination=$(CDPATH='' cd -P -- "$1" && pwd) ||
+    die "cannot resolve handoff home: $1"
+  if [ -e "$validated_destination/tools/pair-codex-handoffs" ] ||
+      [ -L "$validated_destination/tools/pair-codex-handoffs" ]; then
+    validate_tool_checkout "$validated_destination/tools/pair-codex-handoffs"
+  fi
 }
 
 validate_storage_repo() {
@@ -327,9 +363,14 @@ validate_existing_codex_home() {
 script_dir=$(resolve_script_dir)
 codex_home="$HOME/.pair-codex"
 expected_tool_repo='grimmely/pair-codex-handoffs'
+skills_only=false
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --skills-only)
+      skills_only=true
+      shift
+      ;;
     --codex-home)
       [ "$#" -ge 2 ] || die '--codex-home requires a directory'
       codex_home=$2
@@ -359,7 +400,12 @@ done
 
 codex_upgrade=false
 codex_pairing_needs_update=false
-if [ -e "$codex_home" ] || [ -L "$codex_home" ]; then
+if [ "$skills_only" = true ]; then
+  validate_skills_only_home "$codex_home"
+  if [ -d "$codex_home" ]; then
+    codex_upgrade=true
+  fi
+elif [ -e "$codex_home" ] || [ -L "$codex_home" ]; then
   validate_existing_codex_home "$codex_home"
   codex_upgrade=true
 else
@@ -369,7 +415,9 @@ codex_home=$validated_destination
 codex_parent=$(dirname -- "$codex_home")
 
 require_complete_environment
-prompt_storage_repo
+if [ "$skills_only" = false ]; then
+  prompt_storage_repo
+fi
 
 agents_home="$HOME/.agents"
 agents_skills_home="$agents_home/skills"
@@ -398,7 +446,7 @@ fi
 
 legacy_async_skill_path=$agents_skills_home/async-pair-handoff
 legacy_async_skill_present=false
-if [ "$codex_upgrade" = true ] && { [ -e "$legacy_async_skill_path" ] || [ -L "$legacy_async_skill_path" ]; }; then
+if [ "$skills_only" = false ] && [ "$codex_upgrade" = true ] && { [ -e "$legacy_async_skill_path" ] || [ -L "$legacy_async_skill_path" ]; }; then
   [ ! -L "$legacy_async_skill_path" ] && [ -d "$legacy_async_skill_path" ] ||
     die "legacy async handoff skill must be a real directory: $legacy_async_skill_path"
   legacy_async_skill_is_generated "$legacy_async_skill_path" ||
@@ -409,6 +457,7 @@ fi
 skills_to_publish=()
 for source_skill in "$script_dir"/agents/skills/*; do
   [ -d "$source_skill" ] || die "invalid skill in bundle: $source_skill"
+  [ -f "$source_skill/SKILL.md" ] || continue
   skill_name=${source_skill##*/}
   if [ -e "$agents_skills_home/$skill_name" ] || \
      [ -L "$agents_skills_home/$skill_name" ]; then
@@ -494,7 +543,10 @@ publish_upgrade_codex_state() {
   [ ! -L "$tools_parent" ] && [ -d "$tools_parent" ] ||
     die "Pair Codex tools directory is unsafe: $tools_parent"
 
-  publish_upgrade_directory "$tool_stage" "$tools_parent/pair-codex-handoffs" 'handoff tool'
+  if [ "$tool_stage" != "$tools_parent/pair-codex-handoffs" ]; then
+    publish_upgrade_directory "$tool_stage" "$tools_parent/pair-codex-handoffs" 'handoff tool'
+  fi
+  [ "$skills_only" = false ] || return 0
   publish_upgrade_directory "$codex_stage/handoff" "$codex_home/handoff" 'handoff configuration'
   publish_upgrade_directory "$codex_stage/handoff-storage" "$codex_home/handoff-storage" 'handoff storage'
 
@@ -583,13 +635,16 @@ cleanup() {
 }
 trap cleanup EXIT
 
-cp "$script_dir/codex/AGENTS.md" "$codex_stage/AGENTS.md"
-cp "$script_dir/codex/PAIRING.md" "$codex_stage/PAIRING.md"
-cp "$script_dir/codex/config.toml" "$codex_stage/config.toml"
-cp -R "$script_dir/codex/hooks" "$codex_stage/hooks"
-cp -R "$script_dir/codex/agents" "$codex_stage/agents"
+if [ "$skills_only" = false ]; then
+  cp "$script_dir/codex/AGENTS.md" "$codex_stage/AGENTS.md"
+  cp "$script_dir/codex/PAIRING.md" "$codex_stage/PAIRING.md"
+  cp "$script_dir/codex/config.toml" "$codex_stage/config.toml"
+  cp -R "$script_dir/codex/hooks" "$codex_stage/hooks"
+  cp -R "$script_dir/codex/agents" "$codex_stage/agents"
+fi
 
-for skill_name in "${skills_to_publish[@]}"; do
+# Bash 3.2 treats empty arrays as unset under nounset.
+for skill_name in ${skills_to_publish[@]+"${skills_to_publish[@]}"}; do
   cp -R "$script_dir/agents/skills/$skill_name" "$agents_stage/$skill_name"
 done
 
@@ -637,17 +692,24 @@ install_all_plugins() {
   done < "$script_dir/plugins/plugins.txt"
 }
 
-if [ "$codex_upgrade" = false ]; then
+if [ "$skills_only" = true ]; then
+  printf '%s\n' 'Installing skills and their tools only.' >&2
+elif [ "$codex_upgrade" = false ]; then
   install_marketplaces
   install_all_plugins
 else
   printf '%s\n' 'Recognized existing Pair Codex state; preserving its installed plugins.' >&2
 fi
 
-mkdir -p "$(dirname -- "$tool_stage")" ||
-  die 'could not create handoff tool staging directory'
-gh repo clone "https://github.com/$expected_tool_repo.git" "$tool_stage" -- --branch main ||
-  die "could not clone public handoff tool: $expected_tool_repo"
+if [ "$skills_only" = true ] && [ -d "$codex_home/tools/pair-codex-handoffs" ]; then
+  tool_stage=$codex_home/tools/pair-codex-handoffs
+  printf '%s\n' "Preserving existing handoff tool: $tool_stage" >&2
+else
+  mkdir -p "$(dirname -- "$tool_stage")" ||
+    die 'could not create handoff tool staging directory'
+  git clone --branch main "https://github.com/$expected_tool_repo.git" "$tool_stage" ||
+    die "could not clone public handoff tool: $expected_tool_repo"
+fi
 validate_tool_checkout "$tool_stage"
 
 if [ -e "$agents_skills_home/handoff" ] || [ -L "$agents_skills_home/handoff" ]; then
@@ -660,9 +722,13 @@ else
   skills_to_publish+=(handoff)
 fi
 
-PAIR_CODEX_HOME="$codex_stage" fish "$tool_stage/scripts/pair-handoff.fish" \
-  configure --storage-repo "$storage_repo" ||
-  die "could not configure private handoff storage: $storage_repo"
+install_exporter
+
+if [ "$skills_only" = false ]; then
+  PAIR_CODEX_HOME="$codex_stage" fish "$tool_stage/scripts/pair-handoff.fish" \
+    configure --storage-repo "$storage_repo" ||
+    die "could not configure private handoff storage: $storage_repo"
+fi
 
 publish_started=true
 if [ "$codex_upgrade" = true ]; then
@@ -686,7 +752,7 @@ if [ ! -e "$agents_skills_home" ]; then
   created_skills_home=true
 fi
 
-for skill_name in "${skills_to_publish[@]}"; do
+for skill_name in ${skills_to_publish[@]+"${skills_to_publish[@]}"}; do
   staged_skill=$agents_stage/$skill_name
   skill_destination=$agents_skills_home/$skill_name
   mkdir "$skill_destination" ||
@@ -698,22 +764,31 @@ for skill_name in "${skills_to_publish[@]}"; do
     die "could not publish staged skill: $skill_name"
 done
 
-if [ "$codex_upgrade" = true ]; then
+if [ "$skills_only" = false ] && [ "$codex_upgrade" = true ]; then
   retire_legacy_async_skill
 fi
 
 if [ "$codex_upgrade" = true ]; then
-  for published_path in "${upgrade_published_paths[@]}"; do
+  for published_path in ${upgrade_published_paths[@]+"${upgrade_published_paths[@]}"}; do
     rm -f "$published_path/$transaction_marker"
   done
   [ -z "$upgrade_pairing_backup" ] || rm -f "$upgrade_pairing_backup"
 else
   rm -f "$codex_home/$transaction_marker"
 fi
-for skill_name in "${published_skills[@]}"; do
+for skill_name in ${published_skills[@]+"${published_skills[@]}"}; do
   rm -f "$agents_skills_home/$skill_name/$transaction_marker"
 done
 publish_started=false
+
+if [ "$skills_only" = true ]; then
+  printf '%s\n' 'Installed global skills, handoff tool, and session exporter fork.'
+  printf '%s\n' 'Start a new Codex session, then use $handoff configure to choose private storage.'
+  if [ "$codex_home" != "$HOME/.pair-codex" ] || [ -n "${CODEX_HOME:-}" ]; then
+    printf 'To select this tool location, start with: PAIR_CODEX_HOME="%s" codex\n' "$codex_home"
+  fi
+  exit 0
+fi
 
 printf '%s\n' 'Installed Pair Codex with pinned plugins and private async handoff storage.'
 printf '%s\n' 'Start Codex normally:'

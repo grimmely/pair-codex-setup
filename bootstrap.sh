@@ -36,8 +36,18 @@ if [ -L "$setup_checkout/install.sh" ] || [ ! -f "$setup_checkout/install.sh" ];
   die 'Pair Codex Setup main is missing a regular install.sh'
 fi
 
-if ! ( : </dev/tty ) 2>/dev/null; then
-  die 'direct installation requires an interactive terminal for storage setup'
-fi
+needs_terminal=true
+for argument in "$@"; do
+  case "$argument" in
+    --skills-only|--help) needs_terminal=false ;;
+  esac
+done
 
-bash "$setup_checkout/install.sh" "$@" </dev/tty
+if [ "$needs_terminal" = true ]; then
+  if ! ( : </dev/tty ) 2>/dev/null; then
+    die 'direct installation requires an interactive terminal for storage setup'
+  fi
+  bash "$setup_checkout/install.sh" "$@" </dev/tty
+else
+  bash "$setup_checkout/install.sh" "$@" </dev/null
+fi
