@@ -14,3 +14,7 @@ to-tickets
 
 unslop
   Keeps pairing responses concise without removing useful reasoning.
+
+zed-pr-review
+  Opens a GitHub PR in an isolated Zed checkout with its actual comparison base
+  and changed-file Outline Panel. Supports automatic skill selection.
