@@ -60,7 +60,7 @@ curl -fsSL https://raw.githubusercontent.com/grimmely/pair-codex-setup/main/boot
 
 Or run `bash install.sh --skills-only` from a local checkout.
 
-It installs `handoff`, `grilling`, `to-tickets`, and `unslop` into
+It installs `handoff`, `grilling`, `to-tickets`, `unslop`, and `zed-pr-review` into
 `~/.agents/skills`, the public handoff tool into
 `~/.pair-codex/tools/pair-codex-handoffs`, and the exporter fork.
 Existing skills and valid handoff tool checkouts are preserved. A differing
@@ -116,6 +116,7 @@ $HOME/.pair-codex/
 $HOME/.agents/skills/
   handoff/                        Codex handoff skill
   grilling/, to-tickets/, unslop/ pairing skills
+  zed-pr-review/                  Zed PR diff navigation
 ```
 
 ### Upgrade a previous Pair Codex install
@@ -219,6 +220,11 @@ Included skills:
 - `grilling`: one material design challenge before implementation.
 - `to-tickets`: feedback-first work slices.
 - `unslop`: concise, natural responses.
+- `zed-pr-review`: open a PR in an isolated Zed checkout, compare with its actual
+  base, and show the changed-file Outline Panel. Automatically selected for
+  requests such as "Open PR 123 in Zed"; also available as
+  `$zed-pr-review <PR URL>`. Requires Zed and GitHub access; native app automation
+  opens the diff and panel, with manual instructions when automation is unavailable.
 
 ## Safety and updates
 
